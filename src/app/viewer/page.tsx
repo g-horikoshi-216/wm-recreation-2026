@@ -1,15 +1,17 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Leaderboard } from '@/components/shared/Leaderboard';
 import { ResultBadge } from '@/components/shared/ResultBadge';
+import { HamburgerMenu } from '@/components/shared/HamburgerMenu';
+import { HistoryModal } from '@/components/shared/HistoryModal';
+import { FinalResultDisplay } from '@/components/shared/FinalResultDisplay';
 import { useRealtimeSession } from '@/hooks/useRealtimeSession';
 import { useRealtimeQuestion } from '@/hooks/useRealtimeQuestion';
 import { useRealtimeAnswers } from '@/hooks/useRealtimeAnswers';
 import { useRealtimeTeams } from '@/hooks/useRealtimeTeams';
 import { TEAM_NAMES } from '@/lib/constants';
-import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import EditNoteIcon from '@mui/icons-material/EditNote';
@@ -20,6 +22,7 @@ import Looks3Icon from '@mui/icons-material/Looks3';
 function ViewerContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session');
+  const [showHistory, setShowHistory] = useState(false);
 
   const { session } = useRealtimeSession(sessionId);
   const { question, loading: questionLoading } = useRealtimeQuestion(
@@ -47,15 +50,26 @@ function ViewerContent() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* ヘッダー */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2 flex items-center justify-center gap-3">
-            <GpsFixedIcon style={{ fontSize: 40 }} />
-            部レク クイズ大会
-          </h1>
-          <p className="text-indigo-200">{session?.name}</p>
+        <div className="flex justify-between items-start mb-8">
+          <div className="w-10" />
+          <div className="text-center flex-1">
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2 flex items-center justify-center gap-3">
+              WM事業部旅行2026
+            </h1>
+            <p className="text-indigo-200 text-sm sm:text-base">{session?.name}</p>
+          </div>
+          <HamburgerMenu
+            sessionId={sessionId}
+            variant="dark"
+            onShowHistory={() => setShowHistory(true)}
+          />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* 最終結果発表 */}
+        {session?.status === 'finished' && teams.length > 0 ? (
+          <FinalResultDisplay teams={teams} variant="dark" />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* 左側: 問題と結果 */}
           <div className="lg:col-span-2 space-y-6">
             {questionLoading ? (
@@ -197,7 +211,16 @@ function ViewerContent() {
             <Leaderboard teams={teams} />
           </div>
         </div>
+        )}
       </div>
+
+      {/* 過去の結果モーダル */}
+      {showHistory && sessionId && (
+        <HistoryModal
+          sessionId={sessionId}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 }

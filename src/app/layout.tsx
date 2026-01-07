@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "部レク クイズ大会",
+  title: "WM事業部旅行2026",
   description: "チーム対抗三連単クイズアプリ",
 };
 

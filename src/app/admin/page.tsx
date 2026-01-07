@@ -4,6 +4,8 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { QuestionCard } from '@/components/shared/QuestionCard';
 import { Leaderboard } from '@/components/shared/Leaderboard';
+import { HamburgerMenu } from '@/components/shared/HamburgerMenu';
+import { HistoryModal } from '@/components/shared/HistoryModal';
 import { useRealtimeSession } from '@/hooks/useRealtimeSession';
 import { useRealtimeQuestion } from '@/hooks/useRealtimeQuestion';
 import { useRealtimeAnswers } from '@/hooks/useRealtimeAnswers';
@@ -22,6 +24,8 @@ import LooksTwoIcon from '@mui/icons-material/LooksTwo';
 import Looks3Icon from '@mui/icons-material/Looks3';
 import AddIcon from '@mui/icons-material/Add';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import HomeIcon from '@mui/icons-material/Home';
+import CelebrationIcon from '@mui/icons-material/Celebration';
 
 function AdminContent() {
   const searchParams = useSearchParams();
@@ -45,6 +49,7 @@ function AdminContent() {
   const [tieFirstSecond, setTieFirstSecond] = useState(false);
   const [tieSecondThird, setTieSecondThird] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   // 問題一覧を取得
   useEffect(() => {
@@ -178,14 +183,39 @@ function AdminContent() {
     return answers.find((a) => a.team_id === team.id);
   };
 
+  // 最終結果発表
+  const handleFinalResult = async () => {
+    if (!sessionId) return;
+    setLoading(true);
+
+    try {
+      await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'finished' }),
+      });
+    } catch (error) {
+      console.error('Failed to announce final result:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 全問題が終了したか判定
+  const allQuestionsRevealed = questions.length > 0 && questions.every((q) => q.status === 'revealed');
+  const isFinished = session?.status === 'finished';
+
   if (!sessionId) {
     return (
       <div className="min-h-screen bg-gray-100">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-2">
-            <SettingsIcon className="text-indigo-600" />
-            管理者画面
-          </h1>
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <SettingsIcon className="text-indigo-600" />
+              管理者画面
+            </h1>
+            <HamburgerMenu sessionId={null} />
+          </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">セッションを作成</h2>
@@ -236,7 +266,13 @@ function AdminContent() {
             <SettingsIcon className="text-indigo-600" />
             管理者画面
           </h1>
-          <span className="text-gray-600">{session?.name}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-gray-600">{session?.name}</span>
+            <HamburgerMenu
+              sessionId={sessionId}
+              onShowHistory={() => setShowHistory(true)}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -487,14 +523,52 @@ function AdminContent() {
                 )}
               </div>
             </div>
+
+            {/* 最終結果発表ボタン */}
+            {allQuestionsRevealed && !isFinished && (
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg shadow-md p-6">
+                <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                  <CelebrationIcon />
+                  全問題の結果発表が完了しました
+                </h2>
+                <p className="text-white/90 mb-4">
+                  「最終結果発表」ボタンを押すと、各チームと閲覧者の画面に最終順位が表示されます。
+                </p>
+                <button
+                  onClick={handleFinalResult}
+                  disabled={loading}
+                  className="w-full py-4 bg-white text-orange-600 font-bold text-lg rounded-lg hover:bg-orange-50 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <CelebrationIcon />
+                  最終結果発表
+                </button>
+              </div>
+            )}
+
+            {isFinished && (
+              <div className="bg-green-100 border border-green-300 rounded-lg p-4 text-center">
+                <p className="text-green-800 font-semibold flex items-center justify-center gap-2">
+                  <CelebrationIcon className="text-green-600" />
+                  最終結果発表済み
+                </p>
+              </div>
+            )}
           </div>
 
           {/* 右カラム: リーダーボード */}
           <div>
-            <Leaderboard teams={teams} />
+            <Leaderboard teams={teams} editable />
           </div>
         </div>
       </div>
+
+      {/* 過去の結果モーダル */}
+      {showHistory && sessionId && (
+        <HistoryModal
+          sessionId={sessionId}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 }

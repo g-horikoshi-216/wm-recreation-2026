@@ -35,8 +35,8 @@ export function TrifectaPicker({
     }
   }, [initialValues]);
 
-  const getAvailableChoices = (exclude: string[]) => {
-    return choices.filter((c) => !exclude.includes(c));
+  const getAvailableChoices = (currentValue: string, exclude: string[]) => {
+    return choices.filter((c) => c === currentValue || !exclude.includes(c));
   };
 
   const handleSubmit = () => {
@@ -62,7 +62,7 @@ export function TrifectaPicker({
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 text-gray-800"
           >
             <option value="">選択してください</option>
-            {getAvailableChoices([second, third]).map((choice) => (
+            {getAvailableChoices(first, [second, third]).map((choice) => (
               <option key={choice} value={choice}>
                 {choice}
               </option>
@@ -80,7 +80,7 @@ export function TrifectaPicker({
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 text-gray-800"
           >
             <option value="">選択してください</option>
-            {getAvailableChoices([first, third]).map((choice) => (
+            {getAvailableChoices(second, [first, third]).map((choice) => (
               <option key={choice} value={choice}>
                 {choice}
               </option>
@@ -98,7 +98,7 @@ export function TrifectaPicker({
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 text-gray-800"
           >
             <option value="">選択してください</option>
-            {getAvailableChoices([first, second]).map((choice) => (
+            {getAvailableChoices(third, [first, second]).map((choice) => (
               <option key={choice} value={choice}>
                 {choice}
               </option>

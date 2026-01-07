@@ -38,7 +38,7 @@ npm run lint
 2. `.env.local` に環境変数を設定:
    ```
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   NEXT_PUBLIC_SUPABASE_API_KEY=your-supabase-api-key
    NEXT_PUBLIC_ADMIN_PASSWORD=admin
    ```
 3. `supabase/migrations/001_initial_schema.sql` をSupabaseのSQLエディタで実行

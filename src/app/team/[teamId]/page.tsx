@@ -6,8 +6,12 @@ import { QuestionCard } from '@/components/shared/QuestionCard';
 import { TrifectaPicker } from '@/components/team/TrifectaPicker';
 import { ResultBadge } from '@/components/shared/ResultBadge';
 import { PodiumDisplay } from '@/components/shared/PodiumDisplay';
+import { HamburgerMenu } from '@/components/shared/HamburgerMenu';
+import { HistoryModal } from '@/components/shared/HistoryModal';
+import { FinalResultDisplay } from '@/components/shared/FinalResultDisplay';
 import { useRealtimeSession } from '@/hooks/useRealtimeSession';
 import { useRealtimeQuestion } from '@/hooks/useRealtimeQuestion';
+import { useRealtimeTeams } from '@/hooks/useRealtimeTeams';
 import { Team, Answer } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
@@ -21,11 +25,13 @@ export default function TeamPage({ params }: { params: Promise<{ teamId: string 
   const { teamId } = use(params);
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session');
+  const [showHistory, setShowHistory] = useState(false);
 
   const { session } = useRealtimeSession(sessionId);
   const { question, loading: questionLoading } = useRealtimeQuestion(
     session?.current_question_id || null
   );
+  const { teams: allTeams } = useRealtimeTeams(sessionId);
 
   const [team, setTeam] = useState<Team | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -184,16 +190,27 @@ export default function TeamPage({ params }: { params: Promise<{ teamId: string 
             <EmojiEventsIcon className="text-yellow-500" />
             チーム {teamId}
           </h1>
-          <div className="text-right">
-            <span className="text-sm text-gray-500">現在のスコア</span>
-            <p className="text-2xl font-bold text-indigo-600">{team?.total_score || 0}pt</p>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <span className="text-sm text-gray-500">現在のスコア</span>
+              <p className="text-2xl font-bold text-indigo-600">{team?.total_score || 0}pt</p>
+            </div>
+            <HamburgerMenu
+              sessionId={sessionId}
+              onShowHistory={() => setShowHistory(true)}
+            />
           </div>
         </div>
 
+        {/* 最終結果発表 */}
+        {session?.status === 'finished' && allTeams.length > 0 && (
+          <FinalResultDisplay teams={allTeams} currentTeamId={teamId} />
+        )}
+
         {/* 問題表示 */}
-        {questionLoading ? (
+        {session?.status !== 'finished' && questionLoading ? (
           <div className="text-center py-12 text-gray-500">読み込み中...</div>
-        ) : question ? (
+        ) : session?.status !== 'finished' && question ? (
           <div className="space-y-6">
             <QuestionCard question={question} />
 
@@ -312,12 +329,20 @@ export default function TeamPage({ params }: { params: Promise<{ teamId: string 
               </div>
             )}
           </div>
-        ) : (
+        ) : session?.status !== 'finished' ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">問題が出題されるのをお待ちください...</p>
           </div>
-        )}
+        ) : null}
       </div>
+
+      {showHistory && sessionId && (
+        <HistoryModal
+          sessionId={sessionId}
+          teamId={teamId}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 }
