@@ -76,10 +76,10 @@ export default function Home() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
             WM事業部旅行2026
           </h1>
-          <p className="text-gray-600">チーム対抗三連単クイズ</p>
+          <p className="text-lg text-gray-800">チーム対抗三連単クイズ</p>
         </div>
 
-        {sessions.length > 0 && (
+        {/* {sessions.length > 0 && (
           <div className="mb-8">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               セッションを選択
@@ -96,7 +96,7 @@ export default function Home() {
               ))}
             </select>
           </div>
-        )}
+        )} */}
 
         {sessions.length === 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8 text-center">

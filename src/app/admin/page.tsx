@@ -271,6 +271,7 @@ function AdminContent() {
             <HamburgerMenu
               sessionId={sessionId}
               onShowHistory={() => setShowHistory(true)}
+              showDeleteSession
             />
           </div>
         </div>
