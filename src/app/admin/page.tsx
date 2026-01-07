@@ -145,6 +145,22 @@ function AdminContent() {
     }
   };
 
+  // 締め切り解除（再度回答受付）
+  const handleReopen = async (questionId: string) => {
+    setLoading(true);
+    try {
+      await fetch(`/api/questions/${questionId}/reopen`, { method: 'POST' });
+      // 正解入力をリセット
+      setCorrectFirst('');
+      setCorrectSecond('');
+      setCorrectThird('');
+    } catch (error) {
+      console.error('Failed to reopen question:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 結果発表
   const handleReveal = async () => {
     if (!currentQuestion?.id || !correctFirst || !correctSecond || !correctThird) return;
@@ -423,14 +439,24 @@ function AdminContent() {
                       </label>
                     </div>
 
-                    <button
-                      onClick={handleReveal}
-                      disabled={loading || !correctFirst || !correctSecond || !correctThird}
-                      className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      <GpsFixedIcon />
-                      結果を確定して採点
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleReopen(currentQuestion.id)}
+                        disabled={loading}
+                        className="flex-1 py-3 border-2 border-green-600 text-green-600 font-semibold rounded-lg hover:bg-green-50 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <PlayArrowIcon />
+                        締め切り解除
+                      </button>
+                      <button
+                        onClick={handleReveal}
+                        disabled={loading || !correctFirst || !correctSecond || !correctThird}
+                        className="flex-1 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <GpsFixedIcon />
+                        結果を確定して採点
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
