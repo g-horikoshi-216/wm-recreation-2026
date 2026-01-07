@@ -363,8 +363,8 @@ function AdminContent() {
                           className="flex-1 px-3 py-2 border rounded-lg text-gray-800"
                         >
                           <option value="">1着を選択</option>
-                          {currentQuestion.choices.map((c) => (
-                            <option key={c} value={c}>
+                          {currentQuestion.choices.map((c, idx) => (
+                            <option key={`first-${idx}-${c}`} value={c}>
                               {c}
                             </option>
                           ))}
@@ -378,8 +378,8 @@ function AdminContent() {
                           className="flex-1 px-3 py-2 border rounded-lg text-gray-800"
                         >
                           <option value="">2着を選択</option>
-                          {currentQuestion.choices.map((c) => (
-                            <option key={c} value={c}>
+                          {currentQuestion.choices.map((c, idx) => (
+                            <option key={`second-${idx}-${c}`} value={c}>
                               {c}
                             </option>
                           ))}
@@ -393,8 +393,8 @@ function AdminContent() {
                           className="flex-1 px-3 py-2 border rounded-lg text-gray-800"
                         >
                           <option value="">3着を選択</option>
-                          {currentQuestion.choices.map((c) => (
-                            <option key={c} value={c}>
+                          {currentQuestion.choices.map((c, idx) => (
+                            <option key={`third-${idx}-${c}`} value={c}>
                               {c}
                             </option>
                           ))}

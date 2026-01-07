@@ -62,8 +62,8 @@ export function TrifectaPicker({
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 text-gray-800"
           >
             <option value="">選択してください</option>
-            {getAvailableChoices(first, [second, third]).map((choice) => (
-              <option key={choice} value={choice}>
+            {getAvailableChoices(first, [second, third]).map((choice, idx) => (
+              <option key={`first-${idx}-${choice}`} value={choice}>
                 {choice}
               </option>
             ))}
@@ -80,8 +80,8 @@ export function TrifectaPicker({
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 text-gray-800"
           >
             <option value="">選択してください</option>
-            {getAvailableChoices(second, [first, third]).map((choice) => (
-              <option key={choice} value={choice}>
+            {getAvailableChoices(second, [first, third]).map((choice, idx) => (
+              <option key={`second-${idx}-${choice}`} value={choice}>
                 {choice}
               </option>
             ))}
@@ -98,8 +98,8 @@ export function TrifectaPicker({
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 text-gray-800"
           >
             <option value="">選択してください</option>
-            {getAvailableChoices(third, [first, second]).map((choice) => (
-              <option key={choice} value={choice}>
+            {getAvailableChoices(third, [first, second]).map((choice, idx) => (
+              <option key={`third-${idx}-${choice}`} value={choice}>
                 {choice}
               </option>
             ))}
