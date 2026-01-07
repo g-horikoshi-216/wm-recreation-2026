@@ -19,8 +19,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 開発コマンド
 
 ```bash
-cd quiz-app
-
 # 開発サーバー起動
 npm run dev
 
@@ -37,7 +35,7 @@ npm run lint
 ## セットアップ
 
 1. Supabaseプロジェクトを作成
-2. `quiz-app/.env.local` に環境変数を設定:
+2. `.env.local` に環境変数を設定:
    ```
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -50,7 +48,7 @@ npm run lint
 ### ディレクトリ構成
 
 ```
-quiz-app/src/
+src/
 ├── app/                    # Next.js App Router
 │   ├── page.tsx           # トップ（ロール選択）
 │   ├── admin/page.tsx     # 管理者画面
@@ -64,10 +62,10 @@ quiz-app/src/
 
 ### 主要ファイル
 
-- `lib/types.ts` - 型定義
-- `lib/scoring.ts` - 採点ロジック（同着対応含む）
-- `lib/constants.ts` - チーム名、配点など
-- `hooks/useRealtime*.ts` - Supabase Realtime購読
+- `src/lib/types.ts` - 型定義
+- `src/lib/scoring.ts` - 採点ロジック（同着対応含む）
+- `src/lib/constants.ts` - チーム名、配点など
+- `src/hooks/useRealtime*.ts` - Supabase Realtime購読
 
 ### データフロー
 
