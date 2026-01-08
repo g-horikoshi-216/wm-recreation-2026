@@ -7,6 +7,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import HomeIcon from '@mui/icons-material/Home';
 import HistoryIcon from '@mui/icons-material/History';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 interface HamburgerMenuProps {
   sessionId: string | null;
@@ -19,9 +20,11 @@ export function HamburgerMenu({ sessionId, variant = 'light', onShowHistory, sho
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [password, setPassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const isDark = variant === 'dark';
   const buttonClass = isDark
@@ -64,6 +67,39 @@ export function HamburgerMenu({ sessionId, variant = 'light', onShowHistory, sho
     }
   };
 
+  const handleResetSession = async () => {
+    if (!sessionId) return;
+
+    // パスワード確認
+    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin';
+    if (password !== adminPassword) {
+      setDeleteError('パスワードが正しくありません');
+      return;
+    }
+
+    setResetting(true);
+    setDeleteError('');
+
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/reset`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        setShowResetConfirm(false);
+        setPassword('');
+        // ページをリロードして最新状態を反映
+        window.location.reload();
+      } else {
+        setDeleteError('リセットに失敗しました');
+      }
+    } catch {
+      setDeleteError('リセットに失敗しました');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="relative">
       <button
@@ -85,7 +121,7 @@ export function HamburgerMenu({ sessionId, variant = 'light', onShowHistory, sho
                 router.push('/');
                 setIsOpen(false);
               }}
-              className={`w-full px-4 py-3 flex items-center gap-3 rounded-t-lg ${itemClass}`}
+              className={`w-full px-4 py-3 flex text-sm items-center gap-3 rounded-t-lg ${itemClass}`}
             >
               <HomeIcon fontSize="small" />
               トップへ戻る
@@ -96,23 +132,35 @@ export function HamburgerMenu({ sessionId, variant = 'light', onShowHistory, sho
                   onShowHistory();
                   setIsOpen(false);
                 }}
-                className={`w-full px-4 py-3 flex items-center gap-3 ${itemClass} ${showDeleteSession ? '' : 'rounded-b-lg'}`}
+                className={`w-full px-4 py-3 flex text-sm items-center gap-3 ${itemClass} ${showDeleteSession ? '' : 'rounded-b-lg'}`}
               >
                 <HistoryIcon fontSize="small" />
                 過去の結果
               </button>
             )}
             {showDeleteSession && sessionId && (
-              <button
-                onClick={() => {
-                  setShowDeleteConfirm(true);
-                  setIsOpen(false);
-                }}
-                className={`w-full px-4 py-3 flex items-center gap-3 rounded-b-lg text-red-600 ${isDark ? 'hover:bg-red-900/30' : 'hover:bg-red-50'}`}
-              >
-                <DeleteForeverIcon fontSize="small" />
-                セッション削除
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    setShowResetConfirm(true);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-4 py-3 flex text-sm items-center gap-3 text-orange-600 ${isDark ? 'hover:bg-orange-900/30' : 'hover:bg-orange-50'}`}
+                >
+                  <RestartAltIcon fontSize="small" />
+                  セッションリセット
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(true);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-4 py-3 flex text-sm items-center gap-3 rounded-b-lg text-red-600 ${isDark ? 'hover:bg-red-900/30' : 'hover:bg-red-50'}`}
+                >
+                  <DeleteForeverIcon fontSize="small" />
+                  セッション削除
+                </button>
+              </>
             )}
           </div>
         </>
@@ -161,6 +209,55 @@ export function HamburgerMenu({ sessionId, variant = 'light', onShowHistory, sho
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
               >
                 {deleting ? '削除中...' : '削除する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* リセット確認モーダル */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-bold text-orange-600 mb-4 flex items-center gap-2">
+              <RestartAltIcon />
+              セッションをリセット
+            </h3>
+            <p className="text-gray-600 text-sm mb-4">
+              問題は保持したまま、回答・スコア・進行状況をリセットします。同じ問題でもう一度クイズを行えます。
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                管理者パスワード
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="パスワードを入力"
+                className="w-full px-3 py-2 border rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              {deleteError && (
+                <p className="text-red-600 text-sm mt-1">{deleteError}</p>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowResetConfirm(false);
+                  setPassword('');
+                  setDeleteError('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleResetSession}
+                disabled={resetting || !password}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+              >
+                {resetting ? 'リセット中...' : 'リセットする'}
               </button>
             </div>
           </div>
