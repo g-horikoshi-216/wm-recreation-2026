@@ -10,6 +10,7 @@ import { useRealtimeSession } from '@/hooks/useRealtimeSession';
 import { useRealtimeQuestion } from '@/hooks/useRealtimeQuestion';
 import { useRealtimeAnswers } from '@/hooks/useRealtimeAnswers';
 import { useRealtimeTeams } from '@/hooks/useRealtimeTeams';
+import { QuestionDetailModal } from '@/components/admin/QuestionDetailModal';
 import { Question } from '@/lib/types';
 import { TEAM_NAMES, STATUS_LABELS } from '@/lib/constants';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -33,9 +34,17 @@ function AdminContent() {
   const sessionId = searchParams.get('session');
 
   const { session } = useRealtimeSession(sessionId);
-  const { question: currentQuestion } = useRealtimeQuestion(session?.current_question_id || null);
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
+  const { question: currentQuestion } = useRealtimeQuestion(activeQuestionId);
   const { answers } = useRealtimeAnswers(currentQuestion?.id || null);
   const { teams } = useRealtimeTeams(sessionId);
+
+  // セッションのcurrent_question_idが変更されたときのみactiveQuestionIdを更新
+  useEffect(() => {
+    if (session?.current_question_id) {
+      setActiveQuestionId(session.current_question_id);
+    }
+  }, [session?.current_question_id]);
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [showCreateSession, setShowCreateSession] = useState(false);
@@ -50,6 +59,7 @@ function AdminContent() {
   const [tieSecondThird, setTieSecondThird] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
 
   // 問題一覧を取得
   useEffect(() => {
@@ -379,11 +389,13 @@ function AdminContent() {
                           className="flex-1 px-3 py-2 border rounded-lg text-gray-800"
                         >
                           <option value="">1着を選択</option>
-                          {currentQuestion.choices.map((c, idx) => (
-                            <option key={`first-${idx}-${c}`} value={c}>
-                              {c}
-                            </option>
-                          ))}
+                          {currentQuestion.choices
+                            .filter((c) => c === correctFirst || (c !== correctSecond && c !== correctThird))
+                            .map((c, idx) => (
+                              <option key={`first-${idx}-${c}`} value={c}>
+                                {c}
+                              </option>
+                            ))}
                         </select>
                       </div>
                       <div className="flex items-center gap-3">
@@ -394,11 +406,13 @@ function AdminContent() {
                           className="flex-1 px-3 py-2 border rounded-lg text-gray-800"
                         >
                           <option value="">2着を選択</option>
-                          {currentQuestion.choices.map((c, idx) => (
-                            <option key={`second-${idx}-${c}`} value={c}>
-                              {c}
-                            </option>
-                          ))}
+                          {currentQuestion.choices
+                            .filter((c) => c === correctSecond || (c !== correctFirst && c !== correctThird))
+                            .map((c, idx) => (
+                              <option key={`second-${idx}-${c}`} value={c}>
+                                {c}
+                              </option>
+                            ))}
                         </select>
                       </div>
                       <div className="flex items-center gap-3">
@@ -409,11 +423,13 @@ function AdminContent() {
                           className="flex-1 px-3 py-2 border rounded-lg text-gray-800"
                         >
                           <option value="">3着を選択</option>
-                          {currentQuestion.choices.map((c, idx) => (
-                            <option key={`third-${idx}-${c}`} value={c}>
-                              {c}
-                            </option>
-                          ))}
+                          {currentQuestion.choices
+                            .filter((c) => c === correctThird || (c !== correctFirst && c !== correctSecond))
+                            .map((c, idx) => (
+                              <option key={`third-${idx}-${c}`} value={c}>
+                                {c}
+                              </option>
+                            ))}
                         </select>
                       </div>
                     </div>
@@ -513,7 +529,8 @@ function AdminContent() {
                 {questions.map((q) => (
                   <div
                     key={q.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                    onClick={() => setSelectedQuestion(q)}
                   >
                     <div>
                       <span className="font-medium text-gray-800">第{q.question_number}問:</span>{' '}
@@ -526,20 +543,31 @@ function AdminContent() {
                             ? 'bg-blue-100 text-blue-800'
                             : q.status === 'pending'
                             ? 'bg-gray-100 text-gray-600'
+                            : q.status === 'closed'
+                            ? 'bg-yellow-100 text-yellow-800'
                             : 'bg-green-100 text-green-800'
                         }`}
                       >
                         {STATUS_LABELS[q.status]}
                       </span>
                       {q.status === 'pending' && (
-                        <button
-                          onClick={() => handleOpen(q.id)}
-                          disabled={loading}
-                          className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg disabled:opacity-50 flex items-center gap-1"
-                        >
-                          <PlayArrowIcon fontSize="small" />
-                          出題
-                        </button>
+                        currentQuestion?.status === 'closed' ? (
+                          <span className="text-xs text-orange-600 font-medium">
+                            ※先に採点を完了してください
+                          </span>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpen(q.id);
+                            }}
+                            disabled={loading || currentQuestion?.status === 'open'}
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg disabled:opacity-50 flex items-center gap-1"
+                          >
+                            <PlayArrowIcon fontSize="small" />
+                            出題
+                          </button>
+                        )
                       )}
                     </div>
                   </div>
@@ -594,6 +622,23 @@ function AdminContent() {
         <HistoryModal
           sessionId={sessionId}
           onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {/* 問題詳細モーダル */}
+      {selectedQuestion && (
+        <QuestionDetailModal
+          question={selectedQuestion}
+          onClose={() => setSelectedQuestion(null)}
+          onUpdate={(updatedQuestion) => {
+            setQuestions(questions.map((q) =>
+              q.id === updatedQuestion.id ? updatedQuestion : q
+            ));
+            setSelectedQuestion(updatedQuestion);
+          }}
+          onDelete={(questionId) => {
+            setQuestions(questions.filter((q) => q.id !== questionId));
+          }}
         />
       )}
     </div>
