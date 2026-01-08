@@ -20,7 +20,14 @@ export function Leaderboard({ teams, editable = false, onScoreUpdate }: Leaderbo
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
-  const sortedTeams = [...teams].sort((a, b) => b.total_score - a.total_score);
+  const sortedTeams = [...teams].sort((a, b) => {
+    // スコアで降順ソート
+    if (b.total_score !== a.total_score) {
+      return b.total_score - a.total_score;
+    }
+    // 同点の場合はチーム名で昇順ソート
+    return a.name.localeCompare(b.name);
+  });
   const maxScore = sortedTeams[0]?.total_score || 1;
 
   const getRankIcon = (rank: number) => {
