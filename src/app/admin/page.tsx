@@ -281,6 +281,15 @@ function AdminContent() {
   const allQuestionsRevealed = questions.length > 0 && questions.every((q) => q.status === 'revealed');
   const isFinished = session?.status === 'finished';
 
+  // 問題が出題可能かどうかを判定（順番通りの出題を強制）
+  const canOpenQuestion = (q: Question): boolean => {
+    // 第1問は常に出題可能（pending状態の場合）
+    if (q.question_number === 1) return true;
+    // 前の問題が revealed 状態でないと出題不可
+    const prevQuestion = questions.find((pq) => pq.question_number === q.question_number - 1);
+    return prevQuestion?.status === 'revealed';
+  };
+
   if (!sessionId) {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -733,6 +742,10 @@ function AdminContent() {
                           <span className="text-xs text-orange-600 font-medium">
                             ※先に採点を完了してください
                           </span>
+                        ) : !canOpenQuestion(q) ? (
+                          <span className="text-xs text-gray-500 font-medium">
+                            ※前の問題を完了してください
+                          </span>
                         ) : (
                           <button
                             onClick={(e) => {
@@ -740,10 +753,9 @@ function AdminContent() {
                               handleOpen(q.id);
                             }}
                             disabled={loading || currentQuestion?.status === 'open'}
-                            className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg disabled:opacity-50 flex items-center gap-1"
+                            className="p-1.5 bg-green-600 text-white rounded-lg disabled:opacity-50"
                           >
                             <PlayArrowIcon fontSize="small" />
-                            出題
                           </button>
                         )
                       )}
