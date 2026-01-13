@@ -56,7 +56,6 @@ function ViewerContent() {
             <h1 className="text-2xl sm:text-4xl font-bold mb-2 flex items-center justify-center gap-3">
               WM事業部旅行2026
             </h1>
-            <p className="text-indigo-200 text-sm sm:text-base">{session?.name}</p>
           </div>
           <HamburgerMenu
             sessionId={sessionId}

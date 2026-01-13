@@ -76,7 +76,6 @@ export default function Home() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
             WM事業部旅行2026
           </h1>
-          <p className="text-lg text-gray-800">チーム対抗三連単クイズ</p>
         </div>
 
         {/* {sessions.length > 0 && (

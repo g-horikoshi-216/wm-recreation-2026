@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "WM事業部旅行2026",
-  description: "チーム対抗三連単クイズアプリ",
+  description: "チーム対抗クイズアプリ",
 };
 
 export default function RootLayout({
