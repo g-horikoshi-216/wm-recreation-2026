@@ -6,7 +6,14 @@ export type SessionStatus = 'waiting' | 'active' | 'finished';
 
 export type QuestionStatus = 'pending' | 'open' | 'closed' | 'revealed';
 
-export type ResultType = 'trifecta' | 'trio' | 'two' | 'one' | 'none';
+// 3連単: 順番も人も完全一致
+// 2連単: 1着と2着が順番込みで一致
+// 3連複: 3人全員が3位以内（順不同）
+// 2連複: 1着と2着の2人が3位以内（順不同）
+// 単勝: 1着のみ一致
+export type ResultType = 'trifecta' | 'exacta' | 'trio' | 'quinella' | 'win' | 'none';
+
+export type QuestionType = 'trifecta' | 'free_answer';
 
 export interface QuizSession {
   id: string;
@@ -29,11 +36,14 @@ export interface Question {
   session_id: string;
   question_number: number;
   question_text: string;
+  question_type: QuestionType;
   choices: string[];
-  points_trifecta: number;
-  points_trio: number;
-  points_two: number;
-  points_one: number;
+  points_trifecta: number;  // 3連単: 50pt
+  points_exacta: number;    // 2連単: 20pt
+  points_trio: number;      // 3連複: 15pt
+  points_quinella: number;  // 2連複: 10pt
+  points_win: number;       // 単勝: 5pt
+  free_answer_points: number;
   status: QuestionStatus;
   correct_first: string | null;
   correct_second: string | null;
@@ -50,6 +60,8 @@ export interface Answer {
   predict_first: string;
   predict_second: string;
   predict_third: string;
+  free_answer_text: string | null;
+  is_correct: boolean | null;
   result_type: ResultType | null;
   points_earned: number | null;
   answered_at: string;

@@ -5,18 +5,20 @@ import { TeamName } from './types';
 export const TEAM_NAMES: TeamName[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
 
 export const DEFAULT_POINTS = {
-  trifecta: 30,
-  trio: 15,
-  two: 5,
-  one: 1,
+  trifecta: 50,   // 3連単
+  exacta: 20,     // 2連単
+  trio: 15,       // 3連複
+  quinella: 10,   // 2連複
+  win: 5,         // 単勝
   none: 0,
 } as const;
 
 export const RESULT_LABELS = {
-  trifecta: '三連単',
-  trio: '三連複',
-  two: '2的中',
-  one: '1的中',
+  trifecta: '3連単',
+  exacta: '2連単',
+  trio: '3連複',
+  quinella: '2連複',
+  win: '単勝',
   none: 'ハズレ',
 } as const;
 

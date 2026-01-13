@@ -1,4 +1,10 @@
 // チーム対抗クイズアプリ 採点ロジック
+// 新得点体系:
+// 3連単 (trifecta): 50pt - 1着・2着・3着が順番も含めて完全一致
+// 2連単 (exacta): 20pt - 1着・2着が順番込みで一致
+// 3連複 (trio): 15pt - 3人全員が3位以内（順不同）
+// 2連複 (quinella): 10pt - 予想した1着・2着の2人が3位以内（順不同）
+// 単勝 (win): 5pt - 1着のみ一致
 
 import { Question, Answer, ResultType, ScoringResult } from './types';
 
@@ -24,9 +30,10 @@ export function calculateScore(
   correct: CorrectAnswer,
   points: {
     trifecta: number;
+    exacta: number;
     trio: number;
-    two: number;
-    one: number;
+    quinella: number;
+    win: number;
   }
 ): ScoringResult {
   const resultType = determineResultType(prediction, correct);
@@ -39,35 +46,41 @@ export function calculateScore(
 }
 
 /**
- * 結果タイプを判定する
+ * 結果タイプを判定する（優先度順に判定）
  */
 function determineResultType(
   prediction: Prediction,
   correct: CorrectAnswer
 ): ResultType {
-  const correctTop3 = [correct.first, correct.second, correct.third];
-  const predictTop3 = [prediction.first, prediction.second, prediction.third];
-
-  // 三連単チェック（同着を考慮）
+  // 3連単チェック（同着を考慮）
   if (isTrifecta(prediction, correct)) {
     return 'trifecta';
   }
 
-  // 三連複チェック（3人全員が3位以内に入っている、順不同）
+  // 2連単チェック（1着と2着が順番込みで一致）
+  if (isExacta(prediction, correct)) {
+    return 'exacta';
+  }
+
+  const correctTop3 = [correct.first, correct.second, correct.third];
+  const predictTop3 = [prediction.first, prediction.second, prediction.third];
+
+  // 3連複チェック（3人全員が3位以内に入っている、順不同）
   const allInTop3 = predictTop3.every(p => correctTop3.includes(p));
   if (allInTop3) {
     return 'trio';
   }
 
-  // 何人が3位以内に入っているかカウント
-  const hitCount = predictTop3.filter(p => correctTop3.includes(p)).length;
-
-  if (hitCount === 2) {
-    return 'two';
+  // 2連複チェック（予想した1着・2着の2人が3位以内）
+  const predictTop2 = [prediction.first, prediction.second];
+  const bothInTop3 = predictTop2.every(p => correctTop3.includes(p));
+  if (bothInTop3) {
+    return 'quinella';
   }
 
-  if (hitCount === 1) {
-    return 'one';
+  // 単勝チェック（1着のみ一致）
+  if (prediction.first === correct.first) {
+    return 'win';
   }
 
   return 'none';
@@ -120,26 +133,51 @@ function isTrifecta(prediction: Prediction, correct: CorrectAnswer): boolean {
 }
 
 /**
+ * 2連単（1着・2着が順番込みで一致）かどうかを判定（同着を考慮）
+ */
+function isExacta(prediction: Prediction, correct: CorrectAnswer): boolean {
+  // 同着なしの場合
+  if (!correct.tieFirstSecond) {
+    return (
+      prediction.first === correct.first &&
+      prediction.second === correct.second
+    );
+  }
+
+  // 1位と2位が同着の場合
+  const tiedPair = [correct.first, correct.second].sort();
+  const predictedPair = [prediction.first, prediction.second].sort();
+
+  return (
+    tiedPair[0] === predictedPair[0] &&
+    tiedPair[1] === predictedPair[1]
+  );
+}
+
+/**
  * 結果タイプに応じたポイントを取得
  */
 function getPoints(
   resultType: ResultType,
   points: {
     trifecta: number;
+    exacta: number;
     trio: number;
-    two: number;
-    one: number;
+    quinella: number;
+    win: number;
   }
 ): number {
   switch (resultType) {
     case 'trifecta':
       return points.trifecta;
+    case 'exacta':
+      return points.exacta;
     case 'trio':
       return points.trio;
-    case 'two':
-      return points.two;
-    case 'one':
-      return points.one;
+    case 'quinella':
+      return points.quinella;
+    case 'win':
+      return points.win;
     case 'none':
       return 0;
   }
@@ -168,9 +206,10 @@ export function scoreAnswer(question: Question, answer: Answer): ScoringResult {
     },
     {
       trifecta: question.points_trifecta,
+      exacta: question.points_exacta,
       trio: question.points_trio,
-      two: question.points_two,
-      one: question.points_one,
+      quinella: question.points_quinella,
+      win: question.points_win,
     }
   );
 }

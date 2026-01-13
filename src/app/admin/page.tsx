@@ -11,8 +11,10 @@ import { useRealtimeQuestion } from '@/hooks/useRealtimeQuestion';
 import { useRealtimeAnswers } from '@/hooks/useRealtimeAnswers';
 import { useRealtimeTeams } from '@/hooks/useRealtimeTeams';
 import { QuestionDetailModal } from '@/components/admin/QuestionDetailModal';
-import { Question } from '@/lib/types';
+import { Question, QuestionType } from '@/lib/types';
 import { TEAM_NAMES, STATUS_LABELS } from '@/lib/constants';
+import QuizIcon from '@mui/icons-material/Quiz';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import SettingsIcon from '@mui/icons-material/Settings';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -51,7 +53,9 @@ function AdminContent() {
   const [showCreateQuestion, setShowCreateQuestion] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
   const [newQuestionText, setNewQuestionText] = useState('');
+  const [newQuestionType, setNewQuestionType] = useState<QuestionType>('trifecta');
   const [newChoices, setNewChoices] = useState('');
+  const [newFreeAnswerPoints, setNewFreeAnswerPoints] = useState(10);
   const [correctFirst, setCorrectFirst] = useState('');
   const [correctSecond, setCorrectSecond] = useState('');
   const [correctThird, setCorrectThird] = useState('');
@@ -60,6 +64,7 @@ function AdminContent() {
   const [loading, setLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [freeAnswerScores, setFreeAnswerScores] = useState<Record<string, boolean>>({});
 
   // 問題一覧を取得
   useEffect(() => {
@@ -101,11 +106,15 @@ function AdminContent() {
 
   // 問題作成
   const handleCreateQuestion = async () => {
-    if (!sessionId || !newQuestionText || !newChoices) return;
+    if (!sessionId || !newQuestionText) return;
+    // 三連単の場合は選択肢が必須
+    if (newQuestionType === 'trifecta' && !newChoices) return;
     setLoading(true);
 
     try {
-      const choices = newChoices.split(/[,、\n]/).map((c) => c.trim()).filter(Boolean);
+      const choices = newQuestionType === 'trifecta'
+        ? newChoices.split(/[,、\n]/).map((c) => c.trim()).filter(Boolean)
+        : [];
 
       const res = await fetch('/api/questions', {
         method: 'POST',
@@ -113,7 +122,9 @@ function AdminContent() {
         body: JSON.stringify({
           session_id: sessionId,
           question_text: newQuestionText,
+          question_type: newQuestionType,
           choices,
+          free_answer_points: newFreeAnswerPoints,
         }),
       });
 
@@ -122,7 +133,9 @@ function AdminContent() {
         setQuestions([...questions, data]);
         setShowCreateQuestion(false);
         setNewQuestionText('');
+        setNewQuestionType('trifecta');
         setNewChoices('');
+        setNewFreeAnswerPoints(10);
       }
     } catch (error) {
       console.error('Failed to create question:', error);
@@ -171,7 +184,7 @@ function AdminContent() {
     }
   };
 
-  // 結果発表
+  // 結果発表（三連単）
   const handleReveal = async () => {
     if (!currentQuestion?.id || !correctFirst || !correctSecond || !correctThird) return;
     setLoading(true);
@@ -200,6 +213,43 @@ function AdminContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 自由回答の採点
+  const handleScoreFreeAnswer = async () => {
+    if (!currentQuestion?.id) return;
+    setLoading(true);
+
+    try {
+      await fetch(`/api/questions/${currentQuestion.id}/score-free-answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scores: freeAnswerScores }),
+      });
+
+      // リセット
+      setFreeAnswerScores({});
+    } catch (error) {
+      console.error('Failed to score free answer:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 採点のトグル
+  const toggleFreeAnswerScore = (answerId: string) => {
+    setFreeAnswerScores((prev) => {
+      const current = prev[answerId];
+      if (current === undefined) {
+        return { ...prev, [answerId]: true }; // 未設定 → 正解
+      } else if (current === true) {
+        return { ...prev, [answerId]: false }; // 正解 → 不正解
+      } else {
+        const newScores = { ...prev };
+        delete newScores[answerId]; // 不正解 → 未設定
+        return newScores;
+      }
+    });
   };
 
   // チームの回答状況を取得
@@ -329,7 +379,7 @@ function AdminContent() {
                 <div className="bg-white rounded-lg shadow-md p-6">
                   <h3 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <BarChartIcon className="text-indigo-600" />
-                    各チームの予想
+                    各チームの{currentQuestion.question_type === 'free_answer' ? '回答' : '予想'}
                   </h3>
                   <div className="space-y-2">
                     {TEAM_NAMES.map((teamName) => {
@@ -341,14 +391,23 @@ function AdminContent() {
                         >
                           <span className="font-medium text-gray-800 w-16">チーム{teamName}</span>
                           {answer ? (
-                            <>
-                              <span className="flex-1 text-gray-700 flex items-center gap-1">
-                                <LooksOneIcon className="text-yellow-500" fontSize="small" />{answer.predict_first}
-                                <LooksTwoIcon className="text-gray-400" fontSize="small" />{answer.predict_second}
-                                <Looks3Icon className="text-orange-400" fontSize="small" />{answer.predict_third}
-                              </span>
-                              <CheckCircleIcon className="text-green-600" fontSize="small" />
-                            </>
+                            currentQuestion.question_type === 'free_answer' ? (
+                              <>
+                                <span className="flex-1 text-gray-700 truncate px-2">
+                                  {answer.free_answer_text || '（空の回答）'}
+                                </span>
+                                <CheckCircleIcon className="text-green-600" fontSize="small" />
+                              </>
+                            ) : (
+                              <>
+                                <span className="flex-1 text-gray-700 flex items-center gap-1">
+                                  <LooksOneIcon className="text-yellow-500" fontSize="small" />{answer.predict_first}
+                                  <LooksTwoIcon className="text-gray-400" fontSize="small" />{answer.predict_second}
+                                  <Looks3Icon className="text-orange-400" fontSize="small" />{answer.predict_third}
+                                </span>
+                                <CheckCircleIcon className="text-green-600" fontSize="small" />
+                              </>
+                            )
                           ) : (
                             <>
                               <span className="flex-1 text-gray-400">−未回答−</span>
@@ -373,7 +432,7 @@ function AdminContent() {
                   </button>
                 )}
 
-                {currentQuestion.status === 'closed' && (
+                {currentQuestion.status === 'closed' && currentQuestion.question_type === 'trifecta' && (
                   <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
                     <h3 className="text-md font-semibold text-gray-800 flex items-center gap-2">
                       <BoltIcon className="text-yellow-500" />
@@ -475,6 +534,73 @@ function AdminContent() {
                     </div>
                   </div>
                 )}
+
+                {/* 自由回答の採点パネル */}
+                {currentQuestion.status === 'closed' && currentQuestion.question_type === 'free_answer' && (
+                  <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
+                    <h3 className="text-md font-semibold text-gray-800 flex items-center gap-2">
+                      <BoltIcon className="text-yellow-500" />
+                      採点（タップで ⚪︎/× を切り替え）
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      正解: {currentQuestion.free_answer_points}pt
+                    </p>
+
+                    <div className="space-y-2">
+                      {TEAM_NAMES.map((teamName) => {
+                        const answer = getTeamAnswer(teamName);
+                        if (!answer) return null;
+
+                        const score = freeAnswerScores[answer.id];
+                        const isCorrect = score === true;
+                        const isIncorrect = score === false;
+
+                        return (
+                          <div
+                            key={teamName}
+                            className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg"
+                          >
+                            <span className="font-medium text-gray-800 w-16">チーム{teamName}</span>
+                            <span className="flex-1 text-gray-700 truncate px-2">
+                              {answer.free_answer_text || '（空の回答）'}
+                            </span>
+                            <button
+                              onClick={() => toggleFreeAnswerScore(answer.id)}
+                              className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold transition-colors ${
+                                isCorrect
+                                  ? 'bg-green-500 text-white'
+                                  : isIncorrect
+                                  ? 'bg-red-500 text-white'
+                                  : 'bg-gray-200 text-gray-400 hover:bg-gray-300'
+                              }`}
+                            >
+                              {isCorrect ? '⚪︎' : isIncorrect ? '×' : '−'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleReopen(currentQuestion.id)}
+                        disabled={loading}
+                        className="flex-1 py-3 border-2 border-green-600 text-green-600 font-semibold rounded-lg hover:bg-green-50 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <PlayArrowIcon />
+                        締め切り解除
+                      </button>
+                      <button
+                        onClick={handleScoreFreeAnswer}
+                        disabled={loading || Object.keys(freeAnswerScores).length === 0}
+                        className="flex-1 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <GpsFixedIcon />
+                        採点を確定
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -493,6 +619,32 @@ function AdminContent() {
 
               {showCreateQuestion && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
+                  {/* 問題タイプ選択 */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setNewQuestionType('trifecta')}
+                      className={`flex-1 py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                        newQuestionType === 'trifecta'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <QuizIcon fontSize="small" />
+                      三連単
+                    </button>
+                    <button
+                      onClick={() => setNewQuestionType('free_answer')}
+                      className={`flex-1 py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                        newQuestionType === 'free_answer'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <EditNoteIcon fontSize="small" />
+                      自由回答
+                    </button>
+                  </div>
+
                   <input
                     type="text"
                     value={newQuestionText}
@@ -500,23 +652,44 @@ function AdminContent() {
                     placeholder="問題文"
                     className="w-full px-3 py-2 border rounded-lg text-gray-800"
                   />
-                  <textarea
-                    value={newChoices}
-                    onChange={(e) => setNewChoices(e.target.value)}
-                    placeholder="選択肢（カンマ区切りまたは改行）&#10;例: 田中, 佐藤, 鈴木"
-                    rows={3}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-800"
-                  />
+
+                  {newQuestionType === 'trifecta' ? (
+                    <textarea
+                      value={newChoices}
+                      onChange={(e) => setNewChoices(e.target.value)}
+                      placeholder="選択肢（カンマ区切りまたは改行）&#10;例: 田中, 佐藤, 鈴木"
+                      rows={3}
+                      className="w-full px-3 py-2 border rounded-lg text-gray-800"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm text-gray-700 whitespace-nowrap">正解ポイント:</label>
+                      <input
+                        type="number"
+                        value={newFreeAnswerPoints}
+                        onChange={(e) => setNewFreeAnswerPoints(parseInt(e.target.value) || 10)}
+                        min={1}
+                        className="w-20 px-3 py-2 border rounded-lg text-gray-800 text-center"
+                      />
+                      <span className="text-sm text-gray-500">pt</span>
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setShowCreateQuestion(false)}
+                      onClick={() => {
+                        setShowCreateQuestion(false);
+                        setNewQuestionType('trifecta');
+                        setNewChoices('');
+                        setNewFreeAnswerPoints(10);
+                      }}
                       className="px-4 py-2 border rounded-lg text-gray-800"
                     >
                       キャンセル
                     </button>
                     <button
                       onClick={handleCreateQuestion}
-                      disabled={loading}
+                      disabled={loading || !newQuestionText || (newQuestionType === 'trifecta' && !newChoices)}
                       className="px-4 py-2 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
                     >
                       作成
@@ -532,7 +705,12 @@ function AdminContent() {
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
                     onClick={() => setSelectedQuestion(q)}
                   >
-                    <div>
+                    <div className="flex items-center gap-2">
+                      {q.question_type === 'free_answer' ? (
+                        <EditNoteIcon className="text-green-600" fontSize="small" />
+                      ) : (
+                        <QuizIcon className="text-indigo-600" fontSize="small" />
+                      )}
                       <span className="font-medium text-gray-800">第{q.question_number}問:</span>{' '}
                       <span className="text-gray-700">{q.question_text}</span>
                     </div>

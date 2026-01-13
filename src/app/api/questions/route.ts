@@ -6,11 +6,19 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { session_id, question_text, choices } = body;
+    const { session_id, question_text, question_type = 'trifecta', choices, free_answer_points = 10 } = body;
 
-    if (!session_id || !question_text || !choices) {
+    if (!session_id || !question_text) {
       return NextResponse.json(
-        { error: 'session_id, question_text, choices は必須です' },
+        { error: 'session_id, question_text は必須です' },
+        { status: 400 }
+      );
+    }
+
+    // 三連単の場合は選択肢が必須
+    if (question_type === 'trifecta' && !choices) {
+      return NextResponse.json(
+        { error: '三連単問題では choices は必須です' },
         { status: 400 }
       );
     }
@@ -23,15 +31,20 @@ export async function POST(request: NextRequest) {
 
     const question_number = (count || 0) + 1;
 
+    // 自由回答の場合は選択肢を空配列に
+    const insertData = {
+      session_id,
+      question_number,
+      question_text,
+      question_type,
+      choices: question_type === 'free_answer' ? [] : choices,
+      free_answer_points: question_type === 'free_answer' ? free_answer_points : 10,
+      ...body,
+    };
+
     const { data, error } = await supabase
       .from('questions')
-      .insert({
-        session_id,
-        question_number,
-        question_text,
-        choices,
-        ...body,
-      })
+      .insert(insertData)
       .select()
       .single();
 

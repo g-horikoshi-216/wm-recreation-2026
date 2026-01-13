@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { QuestionCard } from '@/components/shared/QuestionCard';
 import { TrifectaPicker } from '@/components/team/TrifectaPicker';
+import { FreeAnswerInput } from '@/components/team/FreeAnswerInput';
 import { ResultBadge } from '@/components/shared/ResultBadge';
 import { PodiumDisplay } from '@/components/shared/PodiumDisplay';
 import { HamburgerMenu } from '@/components/shared/HamburgerMenu';
@@ -138,6 +139,7 @@ export default function TeamPage({ params }: { params: Promise<{ teamId: string 
     };
   }, [question?.id, team?.id]);
 
+  // 三連単の回答送信
   const handleSubmit = async (first: string, second: string, third: string) => {
     if (!question?.id || !team?.id) return;
 
@@ -163,6 +165,40 @@ export default function TeamPage({ params }: { params: Promise<{ teamId: string 
       }
 
       setMessage({ type: 'success', text: '予想を送信しました' });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : '送信に失敗しました',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 自由回答の送信
+  const handleFreeAnswerSubmit = async (text: string) => {
+    if (!question?.id || !team?.id) return;
+
+    setSubmitting(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch('/api/answers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: question.id,
+          team_id: team.id,
+          free_answer_text: text,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || '送信に失敗しました');
+      }
+
+      setMessage({ type: 'success', text: '回答を送信しました' });
     } catch (error) {
       setMessage({
         type: 'error',
@@ -217,20 +253,28 @@ export default function TeamPage({ params }: { params: Promise<{ teamId: string 
             {/* 回答フォームまたは結果表示 */}
             {question.status === 'open' && (
               <>
-                <TrifectaPicker
-                  choices={question.choices}
-                  initialValues={
-                    answer
-                      ? {
-                          first: answer.predict_first,
-                          second: answer.predict_second,
-                          third: answer.predict_third,
-                        }
-                      : undefined
-                  }
-                  disabled={submitting}
-                  onSubmit={handleSubmit}
-                />
+                {question.question_type === 'free_answer' ? (
+                  <FreeAnswerInput
+                    initialValue={answer?.free_answer_text || undefined}
+                    disabled={submitting}
+                    onSubmit={handleFreeAnswerSubmit}
+                  />
+                ) : (
+                  <TrifectaPicker
+                    choices={question.choices}
+                    initialValues={
+                      answer
+                        ? {
+                            first: answer.predict_first,
+                            second: answer.predict_second,
+                            third: answer.predict_third,
+                          }
+                        : undefined
+                    }
+                    disabled={submitting}
+                    onSubmit={handleSubmit}
+                  />
+                )}
 
                 {message && (
                   <div
@@ -248,16 +292,22 @@ export default function TeamPage({ params }: { params: Promise<{ teamId: string 
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-green-800 flex items-center gap-2">
                       <CheckCircleIcon className="text-green-600" fontSize="small" />
-                      予想済み:
-                      <span className="inline-flex items-center gap-1">
-                        <LooksOneIcon className="text-yellow-500" fontSize="small" />{answer.predict_first}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <LooksTwoIcon className="text-gray-400" fontSize="small" />{answer.predict_second}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Looks3Icon className="text-orange-400" fontSize="small" />{answer.predict_third}
-                      </span>
+                      {question.question_type === 'free_answer' ? (
+                        <>回答済み: {answer.free_answer_text}</>
+                      ) : (
+                        <>
+                          予想済み:
+                          <span className="inline-flex items-center gap-1">
+                            <LooksOneIcon className="text-yellow-500" fontSize="small" />{answer.predict_first}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <LooksTwoIcon className="text-gray-400" fontSize="small" />{answer.predict_second}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Looks3Icon className="text-orange-400" fontSize="small" />{answer.predict_third}
+                          </span>
+                        </>
+                      )}
                     </p>
                     <p className="text-sm text-green-600 mt-1">（締切前なら変更可能）</p>
                   </div>
@@ -272,45 +322,11 @@ export default function TeamPage({ params }: { params: Promise<{ teamId: string 
                   回答締切
                 </h3>
                 {answer ? (
-                  <p className="text-yellow-800 flex items-center gap-2">
-                    あなたの予想:
-                    <span className="inline-flex items-center gap-1">
-                      <LooksOneIcon className="text-yellow-500" fontSize="small" />{answer.predict_first}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <LooksTwoIcon className="text-gray-400" fontSize="small" />{answer.predict_second}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Looks3Icon className="text-orange-400" fontSize="small" />{answer.predict_third}
-                    </span>
-                  </p>
-                ) : (
-                  <p className="text-yellow-800">未回答</p>
-                )}
-                <p className="text-sm text-yellow-600 mt-2">結果発表をお待ちください...</p>
-              </div>
-            )}
-
-            {question.status === 'revealed' && (
-              <div className="space-y-4">
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <EmojiEventsIcon className="text-yellow-500" />
-                    結果
-                  </h3>
-                  <PodiumDisplay
-                    first={question.correct_first || ''}
-                    second={question.correct_second || ''}
-                    third={question.correct_third || ''}
-                    isResult
-                  />
-                </div>
-
-                {answer && (
-                  <div className="bg-white rounded-lg shadow-md p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">あなたの結果</h3>
-                    <p className="mb-3 flex items-center gap-2">
-                      予想:
+                  question.question_type === 'free_answer' ? (
+                    <p className="text-yellow-800">あなたの回答: {answer.free_answer_text}</p>
+                  ) : (
+                    <p className="text-yellow-800 flex items-center gap-2">
+                      あなたの予想:
                       <span className="inline-flex items-center gap-1">
                         <LooksOneIcon className="text-yellow-500" fontSize="small" />{answer.predict_first}
                       </span>
@@ -321,8 +337,66 @@ export default function TeamPage({ params }: { params: Promise<{ teamId: string 
                         <Looks3Icon className="text-orange-400" fontSize="small" />{answer.predict_third}
                       </span>
                     </p>
-                    {answer.result_type && (
-                      <ResultBadge resultType={answer.result_type} points={answer.points_earned || 0} />
+                  )
+                ) : (
+                  <p className="text-yellow-800">未回答</p>
+                )}
+                <p className="text-sm text-yellow-600 mt-2">結果発表をお待ちください...</p>
+              </div>
+            )}
+
+            {question.status === 'revealed' && (
+              <div className="space-y-4">
+                {question.question_type === 'trifecta' && (
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <EmojiEventsIcon className="text-yellow-500" />
+                      結果
+                    </h3>
+                    <PodiumDisplay
+                      first={question.correct_first || ''}
+                      second={question.correct_second || ''}
+                      third={question.correct_third || ''}
+                      isResult
+                    />
+                  </div>
+                )}
+
+                {answer && (
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">あなたの結果</h3>
+                    {question.question_type === 'free_answer' ? (
+                      <>
+                        <p className="mb-3 text-gray-700">回答: {answer.free_answer_text}</p>
+                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+                          answer.is_correct
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          <span className="text-2xl font-bold">{answer.is_correct ? '⚪︎' : '×'}</span>
+                          <span className="font-semibold">
+                            {answer.is_correct ? `正解！ +${answer.points_earned}pt` : '不正解'}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="mb-3 flex items-center gap-2">
+                          予想:
+                          <span className="inline-flex items-center gap-1">
+                            <LooksOneIcon className="text-yellow-500" fontSize="small" />{answer.predict_first}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <LooksTwoIcon className="text-gray-400" fontSize="small" />{answer.predict_second}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Looks3Icon className="text-orange-400" fontSize="small" />{answer.predict_third}
+                          </span>
+                        </p>
+                        {answer.result_type && (
+                          <ResultBadge resultType={answer.result_type} points={answer.points_earned || 0} />
+                        )}
+                      </>
                     )}
                   </div>
                 )}
