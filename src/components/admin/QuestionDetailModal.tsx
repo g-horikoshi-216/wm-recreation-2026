@@ -510,7 +510,7 @@ export function QuestionDetailModal({
                           <div key={teamName} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div className="flex-1 min-w-0">
                               <span className="font-medium text-gray-800">チーム{teamName}</span>
-                              <p className="text-gray-600 truncate">{answer.free_answer_text}</p>
+                              <p className="text-gray-600 break-words whitespace-pre-wrap">{answer.free_answer_text}</p>
                             </div>
                             <div className="flex gap-2 ml-4">
                               <button

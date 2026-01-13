@@ -393,7 +393,7 @@ function AdminContent() {
                           {answer ? (
                             currentQuestion.question_type === 'free_answer' ? (
                               <>
-                                <span className="flex-1 text-gray-700 truncate px-2">
+                                <span className="flex-1 text-gray-700 px-2 break-words whitespace-pre-wrap">
                                   {answer.free_answer_text || '（空の回答）'}
                                 </span>
                                 <CheckCircleIcon className="text-green-600" fontSize="small" />

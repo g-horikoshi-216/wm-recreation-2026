@@ -172,7 +172,7 @@ function ViewerContent() {
                                 <td className="py-3">
                                   {answer ? (
                                     question.question_type === 'free_answer' ? (
-                                      <span className="truncate max-w-xs block">{answer.free_answer_text}</span>
+                                      <span className="break-words whitespace-pre-wrap">{answer.free_answer_text}</span>
                                     ) : (
                                       <span>
                                         {answer.predict_first} → {answer.predict_second} →{' '}
