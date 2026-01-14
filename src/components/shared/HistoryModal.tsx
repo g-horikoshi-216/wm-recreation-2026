@@ -113,68 +113,110 @@ export function HistoryModal({ sessionId, teamId, onClose }: HistoryModalProps) 
               {questions.map((q) => (
                 <div key={q.id} className="bg-gray-50 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-3">
-                    <span className="text-sm font-medium text-indigo-600">
-                      第{q.question_number}問
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-indigo-600">
+                        第{q.question_number}問
+                      </span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+                        q.question_type === 'free_answer'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-indigo-100 text-indigo-700'
+                      }`}>
+                        {q.question_type === 'free_answer' ? '自由回答' : '三連単'}
+                      </span>
+                    </div>
                   </div>
                   <p className="font-semibold text-gray-900 mb-3">{q.question_text}</p>
 
-                  {/* 正解 */}
-                  <div className="bg-white rounded-lg p-3 mb-3 border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-2">正解</p>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="flex flex-col items-center">
-                        <LooksOneIcon className="text-yellow-500 text-lg" />
-                        <span className="font-medium text-gray-800 text-sm">{q.correct_first}</span>
+{q.question_type === 'free_answer' ? (
+                    /* 自由回答型 */
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm text-gray-600">正解チーム:</span>
+                        <span className="text-sm font-bold text-green-600">+{q.free_answer_points}pt</span>
                       </div>
-                      <div className="flex flex-col items-center">
-                        <LooksTwoIcon className="text-gray-400 text-lg" />
-                        <span className="font-medium text-gray-800 text-sm">{q.correct_second}</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <Looks3Icon className="text-orange-400 text-lg" />
-                        <span className="font-medium text-gray-800 text-sm">{q.correct_third}</span>
-                      </div>
+                      {(() => {
+                        const correctAnswers = q.answers
+                          .filter(a => a.is_correct)
+                          .sort((a, b) => (a.team?.name || '').localeCompare(b.team?.name || ''));
+                        if (correctAnswers.length === 0) {
+                          return <p className="text-sm text-gray-500">正解者なし</p>;
+                        }
+                        return (
+                          <div className="flex flex-wrap gap-2">
+                            {correctAnswers.map(a => (
+                              <span
+                                key={a.id}
+                                className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium"
+                              >
+                                チーム{a.team?.name}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
-                  </div>
-
-                  {/* 回答一覧 */}
-                  <div className="space-y-2">
-                    {q.answers.map((a) => (
-                      <div
-                        key={a.id}
-                        className="bg-white rounded-lg p-3 border border-gray-200"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-gray-600">
-                            {teamId ? '回答' : `チーム${a.team?.name}`}
-                          </p>
-                          {a.result_type && (
-                            <div className="flex items-center gap-2">
-                              <ResultBadge resultType={a.result_type} size="sm" />
-                              {a.points_earned != null && a.points_earned > 0 && (
-                                <span className="text-sm font-bold text-indigo-600">+{a.points_earned}pt</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                  ) : (
+                    /* 三連単型 */
+                    <>
+                      {/* 正解 */}
+                      <div className="bg-green-50 rounded-lg p-3 mb-3 border-2 border-green-400">
+                        <p className="text-sm text-green-700 font-medium mb-2">正解</p>
                         <div className="grid grid-cols-3 gap-2 text-center">
                           <div className="flex flex-col items-center">
                             <LooksOneIcon className="text-yellow-500 text-lg" />
-                            <span className="font-medium text-gray-800 text-sm">{a.predict_first}</span>
+                            <span className="font-medium text-gray-800 text-sm">{q.correct_first}</span>
                           </div>
                           <div className="flex flex-col items-center">
                             <LooksTwoIcon className="text-gray-400 text-lg" />
-                            <span className="font-medium text-gray-800 text-sm">{a.predict_second}</span>
+                            <span className="font-medium text-gray-800 text-sm">{q.correct_second}</span>
                           </div>
                           <div className="flex flex-col items-center">
                             <Looks3Icon className="text-orange-400 text-lg" />
-                            <span className="font-medium text-gray-800 text-sm">{a.predict_third}</span>
+                            <span className="font-medium text-gray-800 text-sm">{q.correct_third}</span>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+
+                      {/* 回答一覧 */}
+                      <div className="space-y-2">
+                        {[...q.answers].sort((a, b) => (a.team?.name || '').localeCompare(b.team?.name || '')).map((a) => (
+                          <div
+                            key={a.id}
+                            className="bg-white rounded-lg p-3 border border-gray-200"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm text-gray-600">
+                                {teamId ? '回答' : `チーム${a.team?.name}`}
+                              </p>
+                              {a.result_type && (
+                                <div className="flex items-center gap-2">
+                                  <ResultBadge resultType={a.result_type} size="sm" />
+                                  {a.points_earned != null && a.points_earned > 0 && (
+                                    <span className="text-sm font-bold text-indigo-600">+{a.points_earned}pt</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                              <div className="flex flex-col items-center">
+                                <LooksOneIcon className="text-yellow-500 text-lg" />
+                                <span className="font-medium text-gray-800 text-sm">{a.predict_first}</span>
+                              </div>
+                              <div className="flex flex-col items-center">
+                                <LooksTwoIcon className="text-gray-400 text-lg" />
+                                <span className="font-medium text-gray-800 text-sm">{a.predict_second}</span>
+                              </div>
+                              <div className="flex flex-col items-center">
+                                <Looks3Icon className="text-orange-400 text-lg" />
+                                <span className="font-medium text-gray-800 text-sm">{a.predict_third}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
 
