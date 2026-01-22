@@ -56,14 +56,20 @@ export async function PUT(
       );
     }
 
-    const { question_text, choices } = body;
+    const { question_text, choices, free_answer_points } = body;
+
+    const updateData: Record<string, unknown> = {
+      question_text,
+      choices,
+    };
+
+    if (free_answer_points !== undefined) {
+      updateData.free_answer_points = free_answer_points;
+    }
 
     const { data, error } = await supabase
       .from('questions')
-      .update({
-        question_text,
-        choices,
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

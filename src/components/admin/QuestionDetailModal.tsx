@@ -36,6 +36,7 @@ export function QuestionDetailModal({
   const [isEditing, setIsEditing] = useState(false);
   const [editQuestionText, setEditQuestionText] = useState(question.question_text);
   const [editChoices, setEditChoices] = useState(question.choices.join('\n'));
+  const [editFreeAnswerPoints, setEditFreeAnswerPoints] = useState(question.free_answer_points || 10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -157,6 +158,7 @@ export function QuestionDetailModal({
         body: JSON.stringify({
           question_text: editQuestionText,
           choices,
+          free_answer_points: question.question_type === 'free_answer' ? editFreeAnswerPoints : undefined,
         }),
       });
 
@@ -337,6 +339,21 @@ export function QuestionDetailModal({
                     rows={5}
                     className="w-full px-3 py-2 border rounded-lg text-gray-800"
                   />
+                </div>
+              )}
+              {question.question_type === 'free_answer' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    正解時の得点
+                  </label>
+                  <input
+                    type="number"
+                    value={editFreeAnswerPoints}
+                    onChange={(e) => setEditFreeAnswerPoints(Number(e.target.value))}
+                    min={1}
+                    className="w-24 px-3 py-2 border rounded-lg text-gray-800"
+                  />
+                  <span className="ml-2 text-gray-600">pt</span>
                 </div>
               )}
             </div>
